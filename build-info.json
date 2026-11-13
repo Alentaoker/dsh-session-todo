@@ -1,0 +1,76 @@
+{
+  "package": "dsh-session-todo-desktop2",
+  "version": "0.4.5",
+  "builtAt": "2026-11-13T16:15:55.959Z",
+  "platform": "windows-x64",
+  "files": {
+    "package.json": {
+      "bytes": 1864,
+      "sha256": "013224ac4c88e884b573bbc9da95071c5c19b3c3870fc971408aff501ae9c517"
+    },
+    "index.js": {
+      "bytes": 132,
+      "sha256": "b55b5a0e413397fd19e6020acaf97390010868c8bb418ba1aaf9a4690d822027"
+    },
+    "host.js": {
+      "bytes": 36482,
+      "sha256": "298b3c711a0d66214ff239e1c865813c490caa7cb183b1a5f9db7d9c234eb166"
+    },
+    "client-v2.js": {
+      "bytes": 100541,
+      "sha256": "ae13856b17ca513eb6325c25d9cd8438fb02d28ff07ef63903af7caaca5a5979"
+    },
+    "lib/todo-model.js": {
+      "bytes": 15149,
+      "sha256": "61b77d34ff16673fd1db61f8f90f4738336da5f976ed1873d10b99816abe1a0d"
+    },
+    "lib/native-helper.js": {
+      "bytes": 1584,
+      "sha256": "323c8662e511736e3b1578e211e22b964e55cb1f83a5f89fa0e84f37f0dd91ce"
+    },
+    "lib/todo-state-store.js": {
+      "bytes": 595,
+      "sha256": "25ed4b97c888581a3a1808ba47d8db96970b5c0681d7c790f9b14fbba6bacf80"
+    },
+    "lib/todo-storage.js": {
+      "bytes": 2229,
+      "sha256": "b6073b377f80dd8766a185040c1cb7284610aeda03902c0d5206ba1386b74956"
+    },
+    "locale/zh.json": {
+      "bytes": 150,
+      "sha256": "beb5b7f3feb81c603b040ffd991eb1a47e21108b027b4bea00c5e93fad5dbe5b"
+    },
+    "locale/en.json": {
+      "bytes": 177,
+      "sha256": "31b9297170113f031ec4aac7a6ad5f9691b3fd567e38be13ce99eaf4bc6de584"
+    },
+    "icon.svg": {
+      "bytes": 690,
+      "sha256": "dd8c6f2c41bc5668626c1bab49aacb5ce2929e778cbfbd64e212502a6beffcf0"
+    },
+    "cordis.patch.yml": {
+      "bytes": 84,
+      "sha256": "751469fae27f824f3d1c1ad46c0606f0531675a28e81d6dda0d601d713f69c85"
+    },
+    "helper/dsh-session-todo-helper-v4.exe": {
+      "bytes": 82432,
+      "sha256": "8773b2e730cf95e3e50f7050265bd77cb5839c4c0164491a6cfd334960d36969"
+    },
+    "README.md": {
+      "bytes": 2174,
+      "sha256": "da2c11030c7137564978717b45530ddadd353151be635fff695af3157b4d5e20"
+    },
+    "AI_INSTALL.md": {
+      "bytes": 3627,
+      "sha256": "1fd4988513a488b9139e33c899956f63d9e8cc895226f1a35469db338ed379dd"
+    },
+    "CHANGELOG.md": {
+      "bytes": 628,
+      "sha256": "3a0ffdb2b5d2409ed146d03d193f924cdfa621229ad42c79e7dd5a9a31be0cc2"
+    },
+    "LICENSE": {
+      "bytes": 1086,
+      "sha256": "806e1cc10b1565a3026e4f96aaa72382802b1ac10196d9404b105bfe69f5a8e0"
+    }
+  }
+}

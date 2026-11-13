@@ -1,0 +1,67 @@
+{
+  "name": "dsh-session-todo-desktop2",
+  "version": "0.4.5",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "description": "跨工作区会话待查看与待办浮窗，支持个人备注、分组和桌面置顶。",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client-v2.js",
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json",
+    "./host": "./host.js"
+  },
+  "icon": "./icon.svg",
+  "files": [
+    "index.js",
+    "host.js",
+    "client-v2.js",
+    "lib/todo-model.js",
+    "lib/native-helper.js",
+    "lib/todo-state-store.js",
+    "lib/todo-storage.js",
+    "locale/zh.json",
+    "locale/en.json",
+    "icon.svg",
+    "cordis.patch.yml",
+    "helper/dsh-session-todo-helper-v4.exe",
+    "README.md",
+    "AI_INSTALL.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "build-info.json"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-connection",
+        "@deepseek-ai/dsh-client-ui-layout",
+        "@deepseek-ai/dsh-client-ui-sidebar",
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-workspace",
+        "@deepseek-ai/dsh-client-ui-session",
+        "@deepseek-ai/dsh-client-ui-renderer",
+        "@deepseek-ai/dsh-client-ui-slots",
+        "@deepseek-ai/dsh-client-ui-primitives"
+      ]
+    }
+  },
+  "meta": {
+    "title": "会话待办",
+    "description": "跨工作区汇总待查看与待办；支持备注、分组、完成恢复和桌面置顶浮窗。"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Alentaoker/dsh-session-todo.git"
+  },
+  "homepage": "https://github.com/Alentaoker/dsh-session-todo",
+  "bugs": {
+    "url": "https://github.com/Alentaoker/dsh-session-todo/issues"
+  }
+}

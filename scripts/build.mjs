@@ -17,7 +17,7 @@ const run = (command, args, options = {}) => {
   if (result.error) throw result.error
   if (result.status !== 0) throw new Error(`${command} exited ${result.status}`)
 }
-const sources = ['Program', 'CompactView', 'DarkMenu', 'Foreground', 'GroupTabs', 'InlineTitle']
+const sources = ['Program', 'CompactView', 'DarkMenu', 'Foreground', 'GroupTabs', 'InlineTitle', 'Hotkeys', 'Preferences', 'Theme', 'Resident']
 run(csc, [
   '/nologo', '/target:winexe', '/platform:x64', '/optimize+', '/debug-', '/codepage:65001',
   `/out:${join(root, 'helper', 'dsh-session-todo-helper-v4.exe')}`,

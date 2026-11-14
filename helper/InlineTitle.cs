@@ -38,7 +38,7 @@ namespace DshSessionTodo
                 if (e.Key == Key.Enter) { SaveTitleRename(); e.Handled = true; }
                 else if (e.Key == Key.Escape && !renameSaving) { renamingId = null; Render(); e.Handled = true; }
             };
-            input.LostKeyboardFocus += delegate { if (!buildingRows && renamingId == id && !renameSaving && input.IsLoaded) SaveTitleRename(); };
+            input.LostKeyboardFocus += delegate { if (!windowHiding && IsVisible && !buildingRows && renamingId == id && !renameSaving && input.IsLoaded) SaveTitleRename(); };
             input.Loaded += delegate {
                 if (titleFocusRequested && renamingId == id) {
                     titleFocusRequested = false; input.Focus();

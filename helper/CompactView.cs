@@ -53,6 +53,7 @@ namespace DshSessionTodo
         public TodoWindow()
         {
             OpenStreams();
+            LoadWindowPreferences();
             Title = "DSH 会话待办";
             Width = 360; Height = 490; MinWidth = 300; MinHeight = 260;
             WindowStyle = WindowStyle.None;
@@ -64,18 +65,20 @@ namespace DshSessionTodo
             WindowStartupLocation = WindowStartupLocation.Manual;
             Left = Math.Max(8, SystemParameters.WorkArea.Right - Width - 24);
             Top = Math.Max(8, SystemParameters.WorkArea.Bottom - Height - 24);
+            RestoreWindowBounds(); ApplyPaperTheme();
+            Resources["TodoScrollbar"] = LineBrush;
             Foreground = TextBrush;
             FontFamily = new FontFamily("Segoe UI, Microsoft YaHei UI");
             FontSize = 12;
             UseLayoutRounding = true;
             TextOptions.SetTextFormattingMode(this, TextFormattingMode.Display);
-            TextOptions.SetTextRenderingMode(this, TextRenderingMode.ClearType);
+            TextOptions.SetTextRenderingMode(this, TextRenderingMode.Grayscale);
 
             shell = new Grid { Margin = new Thickness(1) };
             shell.RowDefinitions.Add(new RowDefinition { Height = new GridLength(48) });
             shell.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
             shell.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            Border frame = new Border { Background = PageBrush, BorderBrush = LineBrush, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(14), Child = shell };
+            Border frame = new Border { Background = PageBrush, BorderBrush = LineBrush, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(10), Child = shell };
             Content = frame;
 
             Grid header = new Grid { Margin = new Thickness(16, 0, 10, 0), Background = Brushes.Transparent };
@@ -87,13 +90,14 @@ namespace DshSessionTodo
             dragArea.MouseLeftButtonDown += delegate(object sender, MouseButtonEventArgs e) { if (e.ClickCount == 2) ToggleFold(); else { try { DragMove(); } catch { } } };
             Grid.SetColumn(dragArea, 1); header.Children.Add(dragArea);
             StackPanel controls = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
-            pinButton = IconButton("pin", "取消置顶", delegate { Topmost = !Topmost; pinButton.Foreground = Topmost ? GreenBrush : MutedBrush; pinButton.ToolTip = Topmost ? "取消置顶" : "置顶"; });
-            pinButton.Foreground = GreenBrush;
+            pinButton = IconButton("pin", "取消置顶", delegate { Topmost = !Topmost; pinButton.Foreground = Topmost ? GreenBrush : MutedBrush; pinButton.ToolTip = Topmost ? "取消置顶" : "置顶"; SchedulePreferences(); });
+            pinButton.Foreground = Topmost ? GreenBrush : MutedBrush;
+            pinButton.ToolTip = Topmost ? "取消置顶" : "置顶";
             foldButton = IconButton("fold", "收起", ToggleFold);
             controls.Children.Add(pinButton); controls.Children.Add(foldButton);
-            controls.Children.Add(IconButton("close", "关闭", delegate { Close(); }));
+            controls.Children.Add(IconButton("close", "隐藏", HideFloatingWindow));
             Grid.SetColumn(controls, 2); header.Children.Add(controls);
-            shell.Children.Add(header);
+            shell.Children.Add(new Border { Background = HeaderBrush, CornerRadius = new CornerRadius(9, 9, 0, 0), Child = header });
 
             body = new StackPanel();
             Grid main = new Grid();
@@ -103,7 +107,7 @@ namespace DshSessionTodo
             Grid.SetRow(main, 1); shell.Children.Add(main);
             body.Tag = main;
 
-            Grid navigation = new Grid { Margin = new Thickness(12, 0, 12, 9) };
+            Grid navigation = new Grid { Margin = new Thickness(12, 8, 12, 9) };
             navigation.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             navigation.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             StackPanel tabs = new StackPanel { Orientation = Orientation.Horizontal };
@@ -133,7 +137,7 @@ namespace DshSessionTodo
             Grid.SetRow(scroller, 2); main.Children.Add(scroller);
 
             footerText = new TextBlock { Text = "", TextWrapping = TextWrapping.Wrap, FontSize = 10.5, Foreground = RedBrush, Margin = new Thickness(14, 8, 14, 8) };
-            statusBar = new Border { Child = footerText, Visibility = Visibility.Collapsed, Background = Brush("#292022"), CornerRadius = new CornerRadius(0, 0, 13, 13) };
+            statusBar = new Border { Child = footerText, Visibility = Visibility.Collapsed, Background = ErrorSurfaceBrush, CornerRadius = new CornerRadius(0, 0, 9, 9) };
             Grid.SetRow(statusBar, 2); shell.Children.Add(statusBar);
 
             Thumb grip = new Thumb { Width = 14, Height = 14, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Bottom, Cursor = Cursors.SizeNWSE, Opacity = .35 };
@@ -142,7 +146,7 @@ namespace DshSessionTodo
             grip.DragDelta += delegate(object sender, DragDeltaEventArgs e) { Width = Math.Max(MinWidth, Width + e.HorizontalChange); if (!folded) Height = Math.Max(MinHeight, Height + e.VerticalChange); };
             Grid.SetRowSpan(grip, 3); shell.Children.Add(grip);
             Loaded += OnLoaded;
-            Closing += delegate { try { if (Output != null) Output.Flush(); } catch { } };
+            WireResidentWindow();
         }
 
         private void ToggleFold()
@@ -162,7 +166,7 @@ namespace DshSessionTodo
               <Setter Property='Template'><Setter.Value><ControlTemplate TargetType='ScrollBar'>
                 <Track Name='PART_Track' IsDirectionReversed='True' Orientation='Vertical'>
                   <Track.DecreaseRepeatButton><RepeatButton Command='ScrollBar.PageUpCommand' Opacity='0' Focusable='False'/></Track.DecreaseRepeatButton>
-                  <Track.Thumb><Thumb><Thumb.Template><ControlTemplate TargetType='Thumb'><Border CornerRadius='2' Background='#484B54'/></ControlTemplate></Thumb.Template></Thumb></Track.Thumb>
+                  <Track.Thumb><Thumb><Thumb.Template><ControlTemplate TargetType='Thumb'><Border CornerRadius='2' Background='{DynamicResource TodoScrollbar}'/></ControlTemplate></Thumb.Template></Thumb></Track.Thumb>
                   <Track.IncreaseRepeatButton><RepeatButton Command='ScrollBar.PageDownCommand' Opacity='0' Focusable='False'/></Track.IncreaseRepeatButton>
                 </Track>
               </ControlTemplate></Setter.Value></Setter>
@@ -197,9 +201,9 @@ namespace DshSessionTodo
             presenter.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center);
             border.AppendChild(presenter); template.VisualTree = border;
             Trigger hover = new Trigger { Property = UIElement.IsMouseOverProperty, Value = true };
-            hover.Setters.Add(new Setter(Border.BackgroundProperty, CardHoverBrush, "surface")); template.Triggers.Add(hover);
+            hover.Setters.Add(new Setter(Border.BackgroundProperty, new DynamicResourceExtension("TodoHover"), "surface")); template.Triggers.Add(hover);
             Trigger focus = new Trigger { Property = UIElement.IsKeyboardFocusedProperty, Value = true };
-            focus.Setters.Add(new Setter(Border.BorderBrushProperty, GreenBrush, "surface"));
+            focus.Setters.Add(new Setter(Border.BorderBrushProperty, new DynamicResourceExtension("TodoAccent"), "surface"));
             focus.Setters.Add(new Setter(Border.BorderThicknessProperty, new Thickness(1), "surface")); template.Triggers.Add(focus);
             Trigger disabled = new Trigger { Property = UIElement.IsEnabledProperty, Value = false };
             disabled.Setters.Add(new Setter(UIElement.OpacityProperty, .45)); template.Triggers.Add(disabled);
@@ -251,6 +255,8 @@ namespace DshSessionTodo
         private void ShowGlobalMenu()
         {
             ContextMenu menu = Menu();
+            menu.Items.Add(MenuAction("设置", ShowSettings));
+            menu.Items.Add(new Separator());
             menu.Items.Add(MenuAction("新建分组", delegate { EditGroup(null); }));
             MenuItem manage = new MenuItem { Header = "管理分组" };
             foreach (object item in A(state == null ? null : V(state, "groups")))
@@ -323,18 +329,18 @@ namespace DshSessionTodo
             {
                 Button check = IconButton(completed ? "check" : "", completed ? "恢复待办" : "完成待办", delegate { CompleteTask(id, !completed); });
                 check.Width = 18; check.Height = 18; check.Margin = new Thickness(0, 2, 8, 0); check.VerticalAlignment = VerticalAlignment.Top;
-                Border square = new Border { Width = 16, Height = 16, CornerRadius = new CornerRadius(5), BorderBrush = completed ? GreenBrush : Brush("#5B5F68"), BorderThickness = new Thickness(1), Background = completed ? GreenBrush : Brushes.Transparent };
-                if (completed) { square.Child = Glyph("check"); check.Foreground = PageBrush; }
+                Border square = new Border { Width = 17, Height = 17, CornerRadius = new CornerRadius(5), BorderBrush = completed ? GreenBrush : MutedBrush, BorderThickness = new Thickness(1), Background = completed ? GreenBrush : Brushes.Transparent };
+                if (completed) { square.Child = Glyph("check"); check.Foreground = AccentTextBrush; }
                 check.Content = square; line.Children.Add(check);
             }
             else
             {
-                line.Children.Add(new Border { Width = 6, Height = 6, CornerRadius = new CornerRadius(3), Background = S(V(result, "kind")) == "error" ? RedBrush : AmberBrush, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(5, 8, 0, 0) });
+                line.Children.Add(new Border { Width = 6, Height = 6, CornerRadius = new CornerRadius(3), Background = S(V(result, "kind")) == "error" ? RedBrush : S(V(result, "kind")) == "running" ? BlueBrush : AmberBrush, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(5, 8, 0, 0) });
             }
             StackPanel text = new StackPanel();
             Button titleButton = SmallButton("", delegate { QueueTitleOpen(id); });
             titleButton.PreviewMouseLeftButtonDown += delegate(object sender, MouseButtonEventArgs e) { if (e.ClickCount == 2) { BeginTitleRename(id, title); e.Handled = true; } };
-            TextBlock titleText = new TextBlock { Text = title, FontSize = 12.5, Foreground = completed ? MutedBrush : TextBrush, FontWeight = FontWeights.Medium, TextTrimming = TextTrimming.CharacterEllipsis, TextDecorations = completed ? TextDecorations.Strikethrough : null, VerticalAlignment = VerticalAlignment.Center };
+            TextBlock titleText = new TextBlock { Text = title, FontSize = 14, Foreground = completed ? MutedBrush : TextBrush, FontWeight = FontWeights.Medium, TextTrimming = TextTrimming.CharacterEllipsis, TextDecorations = completed ? TextDecorations.Strikethrough : null, VerticalAlignment = VerticalAlignment.Center };
             titleButton.HorizontalContentAlignment = HorizontalAlignment.Left;
             // A stretched presenter gives long titles a real width for ellipsis.
             ControlTemplate titleTemplate = compactTitleTemplate;
@@ -343,7 +349,7 @@ namespace DshSessionTodo
                 titleTemplate = new ControlTemplate(typeof(Button));
                 FrameworkElementFactory focusBorder = new FrameworkElementFactory(typeof(Border)); focusBorder.Name = "focus"; focusBorder.SetValue(Border.BorderThicknessProperty, new Thickness(1)); focusBorder.SetValue(Border.BorderBrushProperty, Brushes.Transparent); focusBorder.SetValue(Border.CornerRadiusProperty, new CornerRadius(3));
                 FrameworkElementFactory titlePresenter = new FrameworkElementFactory(typeof(ContentPresenter)); focusBorder.AppendChild(titlePresenter); titleTemplate.VisualTree = focusBorder;
-                Trigger focusTrigger = new Trigger { Property = UIElement.IsKeyboardFocusedProperty, Value = true }; focusTrigger.Setters.Add(new Setter(Border.BorderBrushProperty, GreenBrush, "focus")); titleTemplate.Triggers.Add(focusTrigger);
+                Trigger focusTrigger = new Trigger { Property = UIElement.IsKeyboardFocusedProperty, Value = true }; focusTrigger.Setters.Add(new Setter(Border.BorderBrushProperty, new DynamicResourceExtension("TodoAccent"), "focus")); titleTemplate.Triggers.Add(focusTrigger);
                 compactTitleTemplate = titleTemplate;
             }
             titleButton.Template = titleTemplate; titleButton.Content = titleText; titleButton.Padding = new Thickness(0); titleButton.Margin = new Thickness(0); titleButton.ToolTip = title; titleButton.MinHeight = 23;
@@ -351,11 +357,11 @@ namespace DshSessionTodo
             if (renamingId == id) text.Children.Add(TitleEditor(id)); else text.Children.Add(titleButton);
             string meta = WorkspaceTitle(id);
             if (unread) meta += "  ·  " + StatusLabel(S(V(result, "kind")), S(V(result, "sourceSessionId")) != id && S(V(result, "sourceSessionId")).Length > 0);
-            text.Children.Add(new TextBlock { Text = meta, FontSize = 10, Foreground = MutedBrush, Margin = new Thickness(0, 2, 0, 0), TextTrimming = TextTrimming.CharacterEllipsis });
+            text.Children.Add(new TextBlock { Text = meta, FontSize = 11, Foreground = MutedBrush, Margin = new Thickness(0, 2, 0, 0), TextTrimming = TextTrimming.CharacterEllipsis });
             if (note.Length > 0 && editingId != id)
             {
                 Button noteButton = SmallButton("", delegate { EditNote(id, task); });
-                noteButton.Content = new TextBlock { Text = note.Replace("\r", " ").Replace("\n", " "), Foreground = Brush("#B4B8C0"), FontSize = 11, TextTrimming = TextTrimming.CharacterEllipsis };
+                noteButton.Content = new TextBlock { Text = note.Replace("\r", " ").Replace("\n", " "), Foreground = MutedBrush, FontSize = 12, TextTrimming = TextTrimming.CharacterEllipsis };
                 noteButton.Template = titleTemplate; noteButton.Padding = new Thickness(0); noteButton.Margin = new Thickness(0, 6, 0, 0); noteButton.ToolTip = note;
                 AutomationProperties.SetName(noteButton, "编辑备注"); text.Children.Add(noteButton);
             }
@@ -364,9 +370,12 @@ namespace DshSessionTodo
             more.Foreground = MutedBrush; more.VerticalAlignment = VerticalAlignment.Top; Grid.SetColumn(more, 2); line.Children.Add(more);
             stack.Children.Add(line);
             if (editingId == id && task != null) stack.Children.Add(NoteInput(id));
-            Border card = new Border { Child = stack, Background = Brushes.Transparent, CornerRadius = new CornerRadius(8), Padding = new Thickness(10, 7, 8, 7), Margin = new Thickness(6, 0, 6, 1) };
-            card.MouseEnter += delegate { card.Background = CardBrush; };
-            card.MouseLeave += delegate { card.Background = Brushes.Transparent; };
+            Border card = new Border { Child = stack, Background = Brushes.Transparent, CornerRadius = new CornerRadius(6), Padding = new Thickness(10, 10, 8, 10), Margin = new Thickness(6, 0, 6, 2) };
+            Action rowState = delegate { bool show = card.IsMouseOver || card.IsKeyboardFocusWithin; more.Opacity = show ? 1 : 0; more.IsHitTestVisible = show; card.Background = show ? CardBrush : Brushes.Transparent; };
+            more.Opacity = 0; more.IsHitTestVisible = false;
+            card.MouseEnter += delegate { rowState(); };
+            card.MouseLeave += delegate { rowState(); };
+            card.IsKeyboardFocusWithinChanged += delegate { rowState(); };
             card.PreviewMouseRightButtonUp += delegate(object sender, MouseButtonEventArgs e) {
                 DependencyObject current = e.OriginalSource as DependencyObject;
                 while (current != null && current != card) {
@@ -470,8 +479,8 @@ namespace DshSessionTodo
             ContextMenu menu = Menu();
             menu.Items.Add(MenuAction("重命名", delegate { BeginGroupRename(group); }));
             MenuItem colors = new MenuItem { Header = "分组颜色" };
-            string[] names = { "薄荷", "琥珀", "薰衣草", "天空", "珊瑚", "石墨" };
-            string[] values = { "#8BBFA8", "#D6AF70", "#B1A1D3", "#88ACCE", "#CF9698", "#989FA9" };
+            string[] names = { "便签黄", "薄荷绿", "雾蓝", "淡紫", "蜜桃", "石墨" };
+            string[] values = { "#D2AC54", "#86B89A", "#88ACCE", "#B1A1D3", "#D3A18D", "#989F98" };
             for (int i = 0; i < values.Length; i++) { string color = values[i]; MenuItem item = MenuAction(names[i], delegate { SendAction("group/update", new Dictionary<string, object> { { "groupId", id }, { "color", color } }); }); item.Icon = new Border { Width = 8, Height = 8, Background = Brush(color), CornerRadius = new CornerRadius(4) }; colors.Items.Add(item); }
             menu.Items.Add(colors);
             menu.Items.Add(MenuAction("上移", delegate { SendAction("group/reorder", new Dictionary<string, object> { { "groupId", id }, { "direction", "up" } }); }));

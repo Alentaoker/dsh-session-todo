@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Threading;
 
-[assembly: System.Reflection.AssemblyFileVersion("0.4.5.0")]
+[assembly: System.Reflection.AssemblyFileVersion("0.5.0.0")]
 
 namespace DshSessionTodo
 {

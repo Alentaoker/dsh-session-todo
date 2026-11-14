@@ -58,6 +58,11 @@ export function apply(ctx) {
   let helperReader = null
   let helperOpening = null
   let helperStartup = null
+  let helperVisible = false
+  let helperHotkey = null
+  let helperRetryTimer = null
+  let helperFailures = 0
+  const windowRequests = new Map()
   let viewRequest = null
   let viewTimer = null
   let renameRequest = null
@@ -123,7 +128,9 @@ export function apply(ctx) {
       workspaces,
       capabilities: {
         nativeHelper: NATIVE_HELPER_AVAILABLE,
-        helperOpen: Boolean(helperProcess),
+        helperOpen: helperVisible,
+        helperRunning: Boolean(helperProcess),
+        hotkey: helperHotkey,
         navigationAck: true,
         events: true,
       },
@@ -278,14 +285,17 @@ export function apply(ctx) {
 
         case 'window/status':
           return ok({
-            opened: Boolean(helperProcess),
+            opened: helperVisible,
+            running: Boolean(helperProcess),
+            hotkey: helperHotkey,
             pid: helperProcess?.pid,
             snapshot: currentSnapshot(),
           })
 
-        case 'window/close':
-          closeHelper()
-          return ok({ closed: true, snapshot: currentSnapshot() })
+        case 'window/close': {
+          const hidden = helperProcess ? await requestHelperWindow('hide') : { visible: false }
+          return ok({ closed: hidden.visible === false, reason: hidden.reason, snapshot: currentSnapshot() })
+        }
 
         case 'view/request': {
           const sessionId = requireString(payload, 'sessionId', 200)
@@ -617,6 +627,7 @@ export function apply(ctx) {
 
   ctx.effect(() => () => {
     disposed = true
+    if (helperRetryTimer) clearTimeout(helperRetryTimer)
     for (const client of eventClients) { removeEventClient(client); try { client.res.end() } catch {} }
     closeHelper()
   }, 'dsh-session-todo: lifecycle')
@@ -635,16 +646,44 @@ export function apply(ctx) {
     })).catch((error) => logError(`record ${kind} failed`, error))
   }
 
-  async function openHelper() {
+  // The native listener starts hidden so the shortcut works before the first open.
+  void readyPromise.then(async () => {
+    if (!disposed && NATIVE_HELPER_AVAILABLE) {
+      const result = await ensureHelper()
+      if (!result.opened) logError('native listener unavailable', result.reason)
+    }
+  }).catch(error => logError('native listener startup failed', error))
+
+  async function ensureHelper() {
     if (helperOpening) return helperOpening
     helperOpening = startHelper()
     try { return await helperOpening } finally { helperOpening = null }
   }
 
+  async function openHelper() {
+    const started = await ensureHelper()
+    if (!started.opened) return started
+    const shown = await requestHelperWindow('focus')
+    return { ...started, opened: shown.visible === true, reason: shown.reason }
+  }
+
+  function requestHelperWindow(type) {
+    if (!helperProcess) return Promise.resolve({ visible: false, reason: '桌面浮窗未启动' })
+    const nonce = `window-${Date.now()}-${Math.random().toString(16).slice(2)}`
+    return new Promise(resolve => {
+      const finish = result => { clearTimeout(timer); windowRequests.delete(nonce); resolve(result) }
+      const timer = setTimeout(() => finish({ visible: helperVisible, reason: '桌面浮窗响应超时，请重试' }), 3000)
+      windowRequests.set(nonce, finish)
+      if (!writeHelper({ type, nonce })) finish({ visible: helperVisible, reason: '桌面浮窗连接已断开' })
+    })
+  }
+
+  function finishWindowRequests() {
+    for (const finish of [...windowRequests.values()]) finish({ visible: false, reason: '桌面浮窗已退出' })
+  }
+
   async function startHelper() {
     if (helperProcess) {
-      writeHelper({ type: 'focus' })
-      broadcastHelper()
       return { opened: true, pid: helperProcess.pid, helper: 'wpf', alreadyOpen: true }
     }
     if (!NATIVE_HELPER_AVAILABLE) {
@@ -661,10 +700,10 @@ export function apply(ctx) {
       const executable = await prepareNativeHelper(HELPER_PATH, cacheRoot)
       if (disposed) return { opened: false, reason: 'DSH 已关闭' }
       log(`native helper cache ${executable.path}; sha256=${executable.sha256}`)
-      child = spawn(executable.path, [], {
+      child = spawn(executable.path, ['--background'], {
         cwd: dirname(executable.path),
-        env: { ...process.env, DSH_SESSION_TODO_LOG_DIR: dirname(stateFile), DSH_SESSION_TODO_OWNER_PID: String(process.ppid) },
-        windowsHide: false,
+        env: { ...process.env, DSH_SESSION_TODO_LOG_DIR: dirname(stateFile), DSH_SESSION_TODO_OWNER_PID: String(process.ppid), DSH_SESSION_TODO_SETTINGS_PATH: join(dirname(stateFile), 'preferences.json') },
+        windowsHide: true,
         stdio: ['pipe', 'pipe', 'pipe'],
       })
     } catch (error) {
@@ -706,6 +745,7 @@ export function apply(ctx) {
       if (helperProcess !== child) return
       if (helperStartup?.child === child) helperStartup.finish({ opened: false, reason: '桌面浮窗在启动完成前退出' })
       helperProcess = null
+      helperVisible = false; helperHotkey = null; finishWindowRequests()
       viewRequest = null
       if (viewTimer) clearTimeout(viewTimer)
       viewTimer = null
@@ -717,6 +757,10 @@ export function apply(ctx) {
       }
       log(`Windows helper exited (code ${code ?? 'null'}, signal ${signal ?? 'null'})`)
       broadcastHelper()
+      if (!disposed && helperFailures < 3) {
+        helperFailures += 1
+        helperRetryTimer = setTimeout(() => { helperRetryTimer = null; if (!disposed) void ensureHelper().catch(error => logError('native listener restart failed', error)) }, 1000 * helperFailures)
+      }
     })
     writeHelper({ type: 'state', data: currentSnapshot() })
     const result = await startup
@@ -728,6 +772,7 @@ export function apply(ctx) {
     if (helperStartup) helperStartup.finish({ opened: false, reason: '桌面浮窗已关闭' })
     const child = helperProcess
     helperProcess = null
+    helperVisible = false; helperHotkey = null; finishWindowRequests()
     viewRequest = null
     if (viewTimer) clearTimeout(viewTimer)
     viewTimer = null
@@ -738,7 +783,9 @@ export function apply(ctx) {
       helperReader = null
     }
     if (child) {
-      try { child.kill() } catch { /* process already exited */ }
+      try { child.stdin.write(`${JSON.stringify({ type: 'shutdown' })}\n`); child.stdin.end() } catch {}
+      const timer = setTimeout(() => { try { child.kill() } catch {} }, 1000)
+      timer.unref?.(); child.once('exit', () => clearTimeout(timer))
     }
   }
 
@@ -800,9 +847,19 @@ export function apply(ctx) {
     if (message?.type === 'ready' && helperStartup) {
       const integrityLevel = Number(message.integrityLevel)
       log(`native helper ready pid=${helperProcess?.pid} integrity=${integrityLevel}`)
+      helperVisible = message.visible === true
+      helperHotkey = message.hotkey ?? null
       helperStartup.finish(integrityLevel >= 8192
         ? { opened: true, pid: helperProcess?.pid, helper: 'wpf' }
         : { opened: false, reason: '桌面浮窗受到系统限制，请重新打开' })
+      liveRevision += 1; broadcastHelper()
+      return
+    }
+    if (message?.type === 'window/state') {
+      const changed = helperVisible !== (message.visible === true) || JSON.stringify(helperHotkey) !== JSON.stringify(message.hotkey ?? null)
+      helperVisible = message.visible === true; helperHotkey = message.hotkey ?? null
+      if (message.nonce) windowRequests.get(message.nonce)?.({ visible: helperVisible })
+      if (changed) { liveRevision += 1; broadcastHelper() }
       return
     }
     if (!message || message.type !== 'action' || typeof message.endpoint !== 'string') return

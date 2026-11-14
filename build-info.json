@@ -1,20 +1,20 @@
 {
   "package": "dsh-session-todo-desktop2",
-  "version": "0.4.5",
-  "builtAt": "2026-11-13T16:15:55.959Z",
+  "version": "0.5.0",
+  "builtAt": "2026-11-14T19:04:26.839Z",
   "platform": "windows-x64",
   "files": {
     "package.json": {
       "bytes": 1864,
-      "sha256": "013224ac4c88e884b573bbc9da95071c5c19b3c3870fc971408aff501ae9c517"
+      "sha256": "fc9fe8b0526ea2cbd5d7289e0286565fc5a500ed019f0abb93888cc94cea8f0a"
     },
     "index.js": {
       "bytes": 132,
       "sha256": "b55b5a0e413397fd19e6020acaf97390010868c8bb418ba1aaf9a4690d822027"
     },
     "host.js": {
-      "bytes": 36482,
-      "sha256": "298b3c711a0d66214ff239e1c865813c490caa7cb183b1a5f9db7d9c234eb166"
+      "bytes": 39593,
+      "sha256": "e824f855fc0a5066dfd8353840249d309b8c18b90f80737141de7508c0e7af11"
     },
     "client-v2.js": {
       "bytes": 100541,
@@ -22,7 +22,7 @@
     },
     "lib/todo-model.js": {
       "bytes": 15149,
-      "sha256": "61b77d34ff16673fd1db61f8f90f4738336da5f976ed1873d10b99816abe1a0d"
+      "sha256": "5ed38c614bf58ade9c38f9f15be5c0648e993c2d0833c9a6e6785a7a11478395"
     },
     "lib/native-helper.js": {
       "bytes": 1584,
@@ -53,20 +53,20 @@
       "sha256": "751469fae27f824f3d1c1ad46c0606f0531675a28e81d6dda0d601d713f69c85"
     },
     "helper/dsh-session-todo-helper-v4.exe": {
-      "bytes": 82432,
-      "sha256": "8773b2e730cf95e3e50f7050265bd77cb5839c4c0164491a6cfd334960d36969"
+      "bytes": 104960,
+      "sha256": "fdd42882025b32cb50c72ac415f1b4cf1cca17607a282cf1d642a9cc71974217"
     },
     "README.md": {
-      "bytes": 2174,
-      "sha256": "da2c11030c7137564978717b45530ddadd353151be635fff695af3157b4d5e20"
+      "bytes": 2899,
+      "sha256": "2f4a7e67f9d9df8b144566489baff3c31743d1f8df5bc049cc168eafd285cf78"
     },
     "AI_INSTALL.md": {
-      "bytes": 3627,
-      "sha256": "1fd4988513a488b9139e33c899956f63d9e8cc895226f1a35469db338ed379dd"
+      "bytes": 4032,
+      "sha256": "dab871d0ccfa6c1cb64156fe2d763e17486febfb544e1ad528cd9010cb4ca7f9"
     },
     "CHANGELOG.md": {
-      "bytes": 628,
-      "sha256": "3a0ffdb2b5d2409ed146d03d193f924cdfa621229ad42c79e7dd5a9a31be0cc2"
+      "bytes": 1178,
+      "sha256": "c4d0592ef5b6c4feb07b9bada95e43cc3e405539b22a8bc290be2e2a5667482e"
     },
     "LICENSE": {
       "bytes": 1086,

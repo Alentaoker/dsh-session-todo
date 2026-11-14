@@ -32,7 +32,7 @@ namespace DshSessionTodo
         private List<Dictionary<string, object>> Groups()
         {
             List<Dictionary<string, object>> groups = A(V(state, "groups")).Select(D).Where(g => g != null).ToList();
-            if (!groups.Any(g => S(V(g, "id")) == "default")) groups.Insert(0, new Dictionary<string, object> { { "id", "default" }, { "name", "默认分组" }, { "color", "#8BBFA8" } });
+            if (!groups.Any(g => S(V(g, "id")) == "default")) groups.Insert(0, new Dictionary<string, object> { { "id", "default" }, { "name", "默认分组" }, { "color", "#D2AC54" } });
             return groups;
         }
 
@@ -93,7 +93,7 @@ namespace DshSessionTodo
                 if (groupRenamingId == id) { groupTabs.Children.Add(GroupNameEditor(group)); continue; }
                 Button tag = SmallButton(S(V(group, "name")), delegate { SelectGroup(id); });
                 tag.Tag = group;
-                Brush color = Brush(ColorOf(V(group, "color"), "#8BBFA8"));
+                Brush color = Brush(ColorOf(V(group, "color"), "#D2AC54"));
                 StackPanel label = new StackPanel { Orientation = Orientation.Horizontal };
                 label.Children.Add(new Border { Width = 6, Height = 6, CornerRadius = new CornerRadius(3), Background = color, Margin = new Thickness(0, 0, 6, 0), VerticalAlignment = VerticalAlignment.Center });
                 label.Children.Add(new TextBlock { Text = S(V(group, "name")), VerticalAlignment = VerticalAlignment.Center });
@@ -141,19 +141,23 @@ namespace DshSessionTodo
         {
             if (group == null) return;
             bool selected = selectedGroup == S(V(group, "id"));
-            SolidColorBrush color = (SolidColorBrush)Brush(ColorOf(V(group, "color"), "#8BBFA8"));
-            tag.Background = selected ? new SolidColorBrush(Color.FromArgb(38, color.Color.R, color.Color.G, color.Color.B)) : Brushes.Transparent;
-            tag.BorderBrush = selected ? color : Brushes.Transparent; tag.BorderThickness = new Thickness(0, 0, 0, selected ? 1 : 0);
+            SolidColorBrush color = (SolidColorBrush)Brush(ColorOf(V(group, "color"), "#D2AC54"));
+            tag.Background = selected ? new SolidColorBrush(Color.FromArgb(58, color.Color.R, color.Color.G, color.Color.B)) : Brushes.Transparent;
+            tag.BorderBrush = selected ? new SolidColorBrush(ReadableAccent(color.Color, PageBrush.Color)) : Brushes.Transparent; tag.BorderThickness = new Thickness(selected ? 1 : 0);
             tag.Foreground = selected ? TextBrush : MutedBrush;
             int count; groupPendingCounts.TryGetValue(S(V(group, "id")), out count);
             StackPanel label = tag.Content as StackPanel;
-            if (label != null && label.Children.Count > 2) ((TextBlock)label.Children[2]).Text = count.ToString(CultureInfo.InvariantCulture);
+            if (label != null && label.Children.Count > 2) {
+                ((TextBlock)label.Children[1]).FontWeight = selected ? FontWeights.SemiBold : FontWeights.Normal;
+                ((TextBlock)label.Children[2]).Text = count.ToString(CultureInfo.InvariantCulture);
+                ((TextBlock)label.Children[2]).Foreground = selected ? TextBrush : MutedBrush;
+            }
             AutomationProperties.SetItemStatus(tag, count + " 个未完成待办");
         }
 
         private string NextGroupColor()
         {
-            string[] colors = { "#8BBFA8", "#D6A451", "#A995DD", "#7DA6E8", "#CF9698", "#989FA9" };
+            string[] colors = { "#D2AC54", "#86B89A", "#88ACCE", "#B1A1D3", "#D3A18D", "#989F98" };
             HashSet<string> used = new HashSet<string>(Groups().Select(g => S(V(g, "color"))), StringComparer.OrdinalIgnoreCase);
             return colors.FirstOrDefault(color => !used.Contains(color)) ?? colors[Groups().Count % colors.Length];
         }
@@ -180,14 +184,14 @@ namespace DshSessionTodo
 
         private TextBox GroupNameEditor(Dictionary<string, object> group)
         {
-            TextBox input = new TextBox { Text = groupNameDraft, MaxLength = 40, MinWidth = 70, MaxWidth = 190, Padding = new Thickness(7, 4, 7, 4), Margin = new Thickness(0, 0, 5, 0), FontSize = 11, Background = CardBrush, Foreground = TextBrush, BorderBrush = Brush(ColorOf(V(group, "color"), "#8BBFA8")), IsReadOnly = groupNameSaving };
+            TextBox input = new TextBox { Text = groupNameDraft, MaxLength = 40, MinWidth = 70, MaxWidth = 190, Padding = new Thickness(7, 4, 7, 4), Margin = new Thickness(0, 0, 5, 0), FontSize = 11, Background = CardBrush, Foreground = TextBrush, BorderBrush = Brush(ColorOf(V(group, "color"), "#D2AC54")), IsReadOnly = groupNameSaving };
             AutomationProperties.SetName(input, "重命名待办分组");
             input.TextChanged += delegate { if (!groupNameSaving) groupNameDraft = input.Text; };
             input.KeyDown += delegate(object sender, KeyEventArgs e) {
                 if (e.Key == Key.Enter) { SaveGroupName(); e.Handled = true; }
                 else if (e.Key == Key.Escape && !groupNameSaving) { CancelGroupRename(); e.Handled = true; }
             };
-            input.LostKeyboardFocus += delegate { if (!buildingGroupTabs && input.IsLoaded && groupRenamingId != null && !groupNameSaving) SaveGroupName(); };
+            input.LostKeyboardFocus += delegate { if (!windowHiding && IsVisible && !buildingGroupTabs && input.IsLoaded && groupRenamingId != null && !groupNameSaving) SaveGroupName(); };
             input.Loaded += delegate { input.Focus(); input.SelectAll(); };
             return input;
         }

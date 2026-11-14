@@ -20,13 +20,14 @@ namespace DshSessionTodo
     internal static class Program
     {
         [STAThread]
-        private static void Main()
+        private static void Main(string[] args)
         {
-            TodoWindow.Log("main-start helper=0.4.5");
-            Application app = new Application();
-            app.ShutdownMode = ShutdownMode.OnMainWindowClose;
+            TodoWindow.Log("main-start helper=0.5.0");
+            Application app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
             TodoWindow window = new TodoWindow();
-            app.Run(window);
+            app.MainWindow = window;
+            window.StartResident(Array.IndexOf(args, "--background") >= 0);
+            app.Run();
         }
     }
 
@@ -37,17 +38,7 @@ namespace DshSessionTodo
         private static StreamWriter Output;
         private static readonly object OutputLock = new object();
         private static readonly string LogPath = Path.Combine(Environment.GetEnvironmentVariable("DSH_SESSION_TODO_LOG_DIR") ?? Path.GetTempPath(), "dsh-session-todo-helper.log");
-        private static readonly Brush PageBrush = Brush("#1C1D21");
-        private static readonly Brush CardBrush = Brush("#25262B");
-        private static readonly Brush CardHoverBrush = Brush("#2C2E34");
-        private static readonly Brush LineBrush = Brush("#36383F");
-        private static readonly Brush TextBrush = Brush("#EEEFF1");
-        private static readonly Brush MutedBrush = Brush("#92969F");
-        private static readonly Brush AmberBrush = Brush("#D6A451");
-        private static readonly Brush PurpleBrush = Brush("#A995DD");
-        private static readonly Brush BlueBrush = Brush("#7DA6E8");
-        private static readonly Brush RedBrush = Brush("#E07A76");
-        private static readonly Brush GreenBrush = Brush("#9CCAB5");
+
 
         private readonly StackPanel content;
         private readonly TextBlock footerText;
@@ -159,7 +150,7 @@ namespace DshSessionTodo
         {
             Button button = SmallButton(text, action);
             button.Background = GreenBrush;
-            button.Foreground = Brush("#17191D");
+            button.Foreground = AccentTextBrush;
             button.BorderBrush = GreenBrush;
             button.FontWeight = FontWeights.SemiBold;
             return button;
@@ -174,24 +165,7 @@ namespace DshSessionTodo
 
         private void OnLoaded(object sender, RoutedEventArgs args)
         {
-            Log("loaded");
-            if (Output != null) lock (OutputLock) {
-                Output.WriteLine(Json.Serialize(new Dictionary<string, object> { { "type", "ready" }, { "version", "0.4.5" }, { "integrityLevel", DshForeground.IntegrityLevel } })); Output.Flush();
-            }
-            StartReader();
             Render();
-            try
-            {
-                IntPtr handle = new WindowInteropHelper(this).Handle;
-                ShowWindow(handle, 9);
-                SetForegroundWindow(handle);
-                Activate();
-                Log("force-shown handle=" + handle.ToString());
-            }
-            catch (Exception error)
-            {
-                Log("force-show failed: " + error.Message);
-            }
         }
 
         private void StartReader()
@@ -212,12 +186,12 @@ namespace DshSessionTodo
                         string copy = line;
                         Dispatcher.BeginInvoke(new Action(delegate { HandleLine(copy); }));
                     }
-                    Dispatcher.BeginInvoke(new Action(delegate { Close(); }));
+                    Dispatcher.BeginInvoke(new Action(delegate { ShutdownResident(); }));
                 }
                 catch (Exception error)
                 {
                     Log("stdin-error: " + error.Message);
-                    Dispatcher.BeginInvoke(new Action(delegate { Close(); }));
+                    Dispatcher.BeginInvoke(new Action(delegate { ShutdownResident(); }));
                 }
             });
         }
@@ -266,9 +240,13 @@ namespace DshSessionTodo
                 }
                 else if (type == "focus")
                 {
-                    ShowWindow(new WindowInteropHelper(this).Handle, 9);
-                    Activate();
+                    RevealFloatingWindow(); AnnounceWindowState(S(V(message, "nonce")));
                 }
+                else if (type == "hide")
+                {
+                    HideFloatingWindow(); AnnounceWindowState(S(V(message, "nonce")));
+                }
+                else if (type == "shutdown") ShutdownResident();
             }
             catch (Exception error)
             {
@@ -317,6 +295,7 @@ namespace DshSessionTodo
         private void Render()
         {
             if (unreadTab == null) return;
+            ApplyPaperTheme();
             unreadTab.Foreground = tab == "unread" ? TextBrush : MutedBrush;
             unreadTab.Background = tab == "unread" ? CardHoverBrush : Brushes.Transparent;
             todoTab.Foreground = tab == "todo" ? TextBrush : MutedBrush;
@@ -343,6 +322,7 @@ namespace DshSessionTodo
             if (tab == "unread") RenderUnread();
             else RenderTodo();
             scroller.ScrollToVerticalOffset(offset);
+            SchedulePreferences();
         }
 
         private Dictionary<string, object> FindWorkspace(string sessionId)
